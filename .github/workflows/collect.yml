@@ -46,9 +46,19 @@ jobs:
       - name: Fetch previously published snapshot
         run: |
           mkdir -p public
-          curl -sfL --retry 2 \
-            https://raw.githubusercontent.com/${{ github.repository }}/data/snapshot.json \
-            -o public/snapshot.json || echo "no previous snapshot — first run"
+          URL=https://raw.githubusercontent.com/${{ github.repository }}/data/snapshot.json
+          CODE=$(curl -sL --retry 2 -o public/snapshot.json -w '%{http_code}' "$URL")
+          if [ "$CODE" = 200 ]; then
+            echo "restored $(jq '.changes | length' public/snapshot.json) changes from the data branch"
+          else
+            # Distinguished from success on purpose. A missing snapshot is legitimate on the very
+            # first run and a real fault on every run after it, and the two used to look identical:
+            # the fetch failed quietly, export started its change history from nothing, and the only
+            # symptom was a change count of zero — which is also what a genuinely quiet day looks
+            # like. Two causes, one indistinguishable signal, is how this went unnoticed once.
+            rm -f public/snapshot.json
+            echo "::warning::no published snapshot at $URL (HTTP $CODE) — change history restarts. Expected only on the first run."
+          fi
 
       - name: Collect
         run: node run.mjs
@@ -72,7 +82,13 @@ jobs:
           git config user.email 'resume@alleyne.dev'
           git checkout --orphan data-publish
           git rm -rq --cached . || true
-          git add -f public/snapshot.json public/catalogue.json
+          # At the branch ROOT, not under public/. The restore step above and the README both
+          # address these files by raw URL, which makes the path part of the contract rather than an
+          # implementation detail. Publishing them one directory deeper made that restore 404 —
+          # silently, because the fetch tolerates a missing file as the first-run case — and would
+          # have quietly cost the change history the whole durability design rests on.
+          mv public/snapshot.json public/catalogue.json .
+          git add -f snapshot.json catalogue.json
           git commit -qm "data: collected $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -qf origin data-publish:data
 
