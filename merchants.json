@@ -1,0 +1,47 @@
+[
+  {
+    "slug": "goretroid",
+    "name": "GoRetroid (Retroid)",
+    "method": "shopify_products_json",
+    "base_url": "https://goretroid.com",
+    "currency": "USD",
+    "enabled": true,
+    "method_rationale": "Shopify's documented public /products.json. Verified 200 on 2026-07-28. Chosen over HTML parsing: structured, stable, and not an anti-bot arms race."
+  },
+  {
+    "slug": "anbernic",
+    "name": "Anbernic",
+    "method": "shopify_products_json",
+    "base_url": "https://anbernic.com",
+    "currency": "USD",
+    "enabled": true,
+    "method_rationale": "Shopify public /products.json. Verified 200 on 2026-07-28."
+  },
+  {
+    "slug": "keepretro",
+    "name": "KeepRetro",
+    "method": "shopify_products_json",
+    "base_url": "https://keepretro.com",
+    "currency": "USD",
+    "enabled": true,
+    "method_rationale": "Shopify public /products.json. Verified 200 on 2026-07-28."
+  },
+  {
+    "slug": "litnxt",
+    "name": "Litnxt",
+    "method": "shopify_products_json",
+    "base_url": "https://litnxt.com",
+    "currency": "USD",
+    "enabled": true,
+    "method_rationale": "Shopify public /products.json. Verified 200 on 2026-07-28."
+  },
+  {
+    "slug": "droix",
+    "name": "DROIX",
+    "method": "managed_provider",
+    "base_url": "https://droix.co.uk",
+    "currency": "GBP",
+    "enabled": false,
+    "method_rationale": "Returns 403 to direct requests on both droix.co.uk and droix.net (verified 2026-07-28). No public structured endpoint found. Kept in the merchant set deliberately: it is the only source that requires a paid managed provider, and therefore the only place a real cost-per-successful-parse figure can be measured. Disabled until a provider is chosen and credentialed."
+  }
+]
