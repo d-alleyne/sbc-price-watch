@@ -2,8 +2,8 @@
 
 Price and stock collection across retailers selling SBC / handheld gaming devices.
 
-Feeds [SBC Arena](https://sbc-arena.netlify.app). Runs on a schedule, stores every reading, and
-reports on its own reliability.
+Feeds [SBC Arena](https://sbc.alleyne.dev). Runs on a schedule, stores every reading, and reports on
+its own reliability.
 
 ## Why it tracks price and stock, not specs
 
@@ -39,10 +39,36 @@ node report.mjs                 # reliability, field quality, cost, change detec
 node report.mjs --redact        # merchant names replaced with letters, share-safe
 node report.mjs --json          # machine-readable
 node regrade.mjs                # re-score stored observations after a grader change
+node export.mjs                 # write the published snapshot + catalogue
+node prune.mjs --days 14        # bound the observation store
 ```
 
 The database is written to `data/prices.db` and is gitignored — it is regenerable and grows with
 every run.
+
+## Schedule and published output
+
+`.github/workflows/collect.yml` runs twice daily (06:10 and 18:10 UTC). It collects, prunes
+observations older than 14 days, exports, and force-pushes two files to the orphan **`data`** branch:
+
+| File | Size | Holds |
+|---|---|---|
+| [`snapshot.json`](https://raw.githubusercontent.com/d-alleyne/sbc-price-watch/data/snapshot.json) | ~8 KB | merchants, runs, field grades, detected changes, catalogue totals |
+| [`catalogue.json`](https://raw.githubusercontent.com/d-alleyne/sbc-price-watch/data/catalogue.json) | ~1.1 MB | every product and variant with its latest price, stock and image |
+
+They are split because the operating record is 8 KB and the catalogue is 1.1 MB, and most consumers
+want the first. The branch is an orphan force-pushed to a single commit each run, so republishing
+twice a day does not accumulate roughly 100 MB of history a year in a repository whose value is that
+it is small and readable.
+
+`observations` are pruned at 14 days; `runs` and `field_outcomes` are kept indefinitely. The two kept
+tables are the operating record — they are small, and they are the point. Raw observations are only
+needed by change detection, which compares against the previous reading, and by `regrade.mjs`, which
+needs a working window. Change history itself survives pruning and cache loss because `export.mjs`
+merges newly detected changes into the previously published snapshot rather than regenerating it.
+
+The database between runs is a GitHub Actions cache, deliberately treated as best-effort. Losing it
+costs the raw observation window and nothing else.
 
 ## What the report answers
 
@@ -60,7 +86,7 @@ every run.
 |---|---|
 | `runs` | one row per merchant per execution: method, HTTP outcome, bytes, duration, cost |
 | `field_outcomes` | per-run per-field `ok`/`missing`/`invalid` counts |
-| `observations` | append-only price/stock readings |
+| `observations` | append-only price/stock readings, including the merchant's image URL |
 
 A failed merchant is recorded as a failed run rather than skipped. A gap in `runs` would read as "we
 never looked", which is a different and more flattering claim than "we looked and it broke".
