@@ -1,0 +1,14 @@
+{
+  "name": "sbc-price-watch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Price and stock collection across SBC / handheld gaming retailers",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "scrape": "node run.mjs",
+    "report": "node report.mjs",
+    "report:redact": "node report.mjs --redact",
+    "regrade": "node regrade.mjs"
+  }
+}

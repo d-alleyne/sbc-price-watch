@@ -1,0 +1,9 @@
+# local observation store — regenerable, grows with every run
+/data/
+
+# node
+node_modules/
+*.log
+
+# os
+.DS_Store

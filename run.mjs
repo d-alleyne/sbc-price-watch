@@ -64,10 +64,14 @@ for (const m of merchants) {
       bytes, duration_ms: duration, cost_usd: 0,
     });
 
+    // Only name a weakest field when one is actually weak. Reporting "least reliable: price 100.0%"
+    // on a clean merchant reads as a defect that does not exist.
     const worst = summariseTally(tally)[0];
+    const note = worst && worst.rate < 1
+      ? `  · least reliable: ${worst.field} ${(worst.rate * 100).toFixed(1)}%`
+      : '  · all fields complete';
     console.log(
-      `OK  ${products} products / ${rows.length} variants, ${(bytes / 1024).toFixed(0)}KB, ${duration}ms` +
-      (worst ? `  · least reliable: ${worst.field} ${(worst.rate * 100).toFixed(1)}%` : '')
+      `OK  ${products} products / ${rows.length} variants, ${(bytes / 1024).toFixed(0)}KB, ${duration}ms${note}`
     );
   } catch (err) {
     failures++;
