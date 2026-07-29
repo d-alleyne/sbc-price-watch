@@ -38,10 +38,10 @@
   {
     "slug": "droix",
     "name": "DROIX",
-    "method": "managed_provider",
+    "method": "permission_required",
     "base_url": "https://droix.co.uk",
     "currency": "GBP",
     "enabled": false,
-    "method_rationale": "Returns 403 to direct requests on both droix.co.uk and droix.net (verified 2026-07-28). No public structured endpoint found. Kept in the merchant set deliberately: it is the only source that requires a paid managed provider, and therefore the only place a real cost-per-successful-parse figure can be measured. Disabled until a provider is chosen and credentialed."
+    "method_rationale": "EXCLUDED FROM AUTOMATED COLLECTION — deliberate, 2026-07-29. Diagnosed before buying anything: the 403 is a Cloudflare Managed Challenge (`cf-mitigated: challenge`, `cType: 'managed'`, interstitial titled 'Just a moment...'), not a User-Agent block. Browser UA and full browser headers all return 403 on both droix.co.uk and droix.net, and even /robots.txt sits behind the challenge — so the site publishes no crawl preference and is blanket-challenging non-browser traffic. A managed provider (Oxylabs / ZenRows / Bright Data) would function here purely to defeat that control, which is circumvention of an access restriction, contradicts the ToS-compliance position this project is meant to demonstrate, and is the exact arms race that is shutting down rpilocator in July 2026. NOT DOING IT. Correct route is permission: DROIX runs an affiliate programme (2-5%), so request product-data or feed access through it. Until that is granted, DROIX stays disabled and this entry stands as the per-merchant method decision rather than a gap."
   }
 ]
