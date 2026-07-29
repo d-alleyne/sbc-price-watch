@@ -1,0 +1,97 @@
+# Collect price and stock, then publish the snapshot the website builds from.
+name: collect
+
+on:
+  schedule:
+    # Twice daily, 06:10 and 18:10 UTC. Offset off the hour because scheduled workflows queue
+    # heavily on the hour and GitHub delays them under load.
+    - cron: '10 6,18 * * *'
+  workflow_dispatch:
+
+# One run at a time. Two concurrent runs would interleave writes on a single SQLite file restored
+# from the same cache, and the loser's observations would vanish when the winner saves its cache.
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # node:sqlite needs >= 22 and the collector has zero dependencies, so there is no
+          # install step and no lockfile to cache.
+          node-version: '24'
+
+      # The database is a working set, not the durable store. It only has to survive between runs
+      # so change detection has a previous reading to compare against. Restoring by prefix picks up
+      # the most recent save; if the cache is ever evicted, observations restart and nothing
+      # durable is lost, because change history lives in the published snapshot.
+      - name: Restore observation store
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: prices-db-${{ github.run_id }}
+          restore-keys: prices-db-
+
+      # The previously published snapshot carries the accumulated change history. export.mjs merges
+      # into it rather than regenerating, so pulling it back is what makes that history durable
+      # across a cache eviction. A missing file is the first-run case, not an error.
+      - name: Fetch previously published snapshot
+        run: |
+          mkdir -p public
+          curl -sfL --retry 2 \
+            https://raw.githubusercontent.com/${{ github.repository }}/data/snapshot.json \
+            -o public/snapshot.json || echo "no previous snapshot — first run"
+
+      - name: Collect
+        run: node run.mjs
+
+      - name: Prune observations older than 14 days
+        run: node prune.mjs --days 14
+
+      - name: Export snapshot and catalogue
+        run: node export.mjs
+
+      - name: Report
+        run: node report.mjs
+
+      # Published to an orphan branch that is force-pushed to a single commit every run. The
+      # catalogue is ~1.1 MB and changes on most runs; committing it to main twice a day would add
+      # roughly 100 MB of history a year to a repository whose value is that it is small and
+      # readable. An orphan branch keeps the published data at a stable raw URL with no accumulation.
+      - name: Publish to the data branch
+        run: |
+          git config user.name  'sbc-price-watch[bot]'
+          git config user.email 'resume@alleyne.dev'
+          git checkout --orphan data-publish
+          git rm -rq --cached . || true
+          git add -f public/snapshot.json public/catalogue.json
+          git commit -qm "data: collected $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -qf origin data-publish:data
+
+      - name: Save observation store
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data
+          key: prices-db-${{ github.run_id }}
+
+      # Tells Cloudflare Pages to rebuild the site against the new data, rather than the site
+      # rebuilding on a timer and usually finding nothing changed. Skipped silently when the secret
+      # is absent — this workflow must keep working before the site exists.
+      - name: Trigger site rebuild
+        env:
+          HOOK: ${{ secrets.CF_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$HOOK" ]; then
+            curl -sf -X POST "$HOOK" >/dev/null && echo "site rebuild triggered"
+          else
+            echo "CF_DEPLOY_HOOK not set — skipping"
+          fi
