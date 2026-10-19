@@ -19,11 +19,11 @@ permissions:
 
 jobs:
   collect:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # node:sqlite needs >= 22 and the collector has zero dependencies, so there is no
           # install step and no lockfile to cache.
@@ -34,7 +34,7 @@ jobs:
       # the most recent save; if the cache is ever evicted, observations restart and nothing
       # durable is lost, because change history lives in the published snapshot.
       - name: Restore observation store
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: data
           key: prices-db-${{ github.run_id }}
@@ -93,7 +93,7 @@ jobs:
           git push -qf origin data-publish:data
 
       - name: Save observation store
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         if: always()
         with:
           path: data
